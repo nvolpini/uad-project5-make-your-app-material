@@ -159,17 +159,19 @@ public class ArticleDetailActivity extends ActionBarActivity
         @Override
         public void setPrimaryItem(ViewGroup container, int position, Object object) {
             super.setPrimaryItem(container, position, object);
-            ArticleDetailFragment fragment = (ArticleDetailFragment) object;
+            //ArticleDetailFragment fragment = (ArticleDetailFragment) object;
+			ArticleDetailFragment2 fragment = (ArticleDetailFragment2) object;
             if (fragment != null) {
-                mSelectedItemUpButtonFloor = fragment.getUpButtonFloor();
-                updateUpButtonPosition();
+                //mSelectedItemUpButtonFloor = fragment.getUpButtonFloor();
+                //updateUpButtonPosition();
             }
         }
 
         @Override
         public Fragment getItem(int position) {
             mCursor.moveToPosition(position);
-            return ArticleDetailFragment.newInstance(mCursor.getLong(ArticleLoader.Query._ID));
+            //return ArticleDetailFragment.newInstance(mCursor.getLong(ArticleLoader.Query._ID));
+			return ArticleDetailFragment2.newInstance(mCursor.getLong(ArticleLoader.Query._ID));
         }
 
         @Override
