@@ -7,12 +7,14 @@ import android.content.Loader;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ShareCompat;
 import android.support.v7.graphics.Palette;
+import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.text.method.LinkMovementMethod;
@@ -20,6 +22,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -27,6 +30,11 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 /**
  * A fragment representing a single Article detail screen. This fragment is
@@ -45,7 +53,7 @@ public class ArticleDetailFragment extends Fragment implements
     private View mRootView;
     private int mMutedColor = 0xFF333333;
     private ObservableScrollView mScrollView;
-    private DrawInsetsFrameLayout mDrawInsetsFrameLayout;
+    //private DrawInsetsFrameLayout mDrawInsetsFrameLayout;
     private ColorDrawable mStatusBarColorDrawable;
 
     private int mTopInset;
@@ -55,7 +63,15 @@ public class ArticleDetailFragment extends Fragment implements
     private boolean mIsCard = false;
     private int mStatusBarFullOpacityBottom;
 
-    /**
+	private Calendar cal = Calendar.getInstance();
+
+	private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
+	// Use default locale format
+	private SimpleDateFormat outputFormat = new SimpleDateFormat();
+	// Most time functions can only handle 1902 - 2037
+	private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
+
+	/**
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
      */
@@ -82,7 +98,21 @@ public class ArticleDetailFragment extends Fragment implements
         mStatusBarFullOpacityBottom = getResources().getDimensionPixelSize(
                 R.dimen.detail_card_top_margin);
         setHasOptionsMenu(true);
+
+
     }
+
+	private void scheduleStartPostponedTransition(final View sharedElement) {
+		sharedElement.getViewTreeObserver().addOnPreDrawListener(
+				new ViewTreeObserver.OnPreDrawListener() {
+					@Override
+					public boolean onPreDraw() {
+						sharedElement.getViewTreeObserver().removeOnPreDrawListener(this);
+						ActivityCompat.startPostponedEnterTransition(getActivity());
+						return true;
+					}
+				});
+	}
 
     public ArticleDetailActivity getActivityCast() {
         return (ArticleDetailActivity) getActivity();
@@ -103,7 +133,7 @@ public class ArticleDetailFragment extends Fragment implements
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         mRootView = inflater.inflate(R.layout.fragment_article_detail, container, false);
-        mDrawInsetsFrameLayout = (DrawInsetsFrameLayout)
+        /*mDrawInsetsFrameLayout = (DrawInsetsFrameLayout)
                 mRootView.findViewById(R.id.draw_insets_frame_layout);
         mDrawInsetsFrameLayout.setOnInsetsCallback(new DrawInsetsFrameLayout.OnInsetsCallback() {
             @Override
@@ -122,9 +152,16 @@ public class ArticleDetailFragment extends Fragment implements
                 updateStatusBar();
             }
         });
-
+*/
         mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
-        mPhotoContainerView = mRootView.findViewById(R.id.photo_container);
+        //mPhotoContainerView = mRootView.findViewById(R.id.photo_container);
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+
+			String transitionPhotoName = getString(R.string.transition_photo).trim() + String.valueOf(mItemId).trim();
+			Log.i("name:",transitionPhotoName);
+			mPhotoView.setTransitionName(transitionPhotoName);
+		}
 
         mStatusBarColorDrawable = new ColorDrawable(0);
 
@@ -155,7 +192,7 @@ public class ArticleDetailFragment extends Fragment implements
                     (int) (Color.blue(mMutedColor) * 0.9));
         }
         mStatusBarColorDrawable.setColor(color);
-        mDrawInsetsFrameLayout.setInsetBackground(mStatusBarColorDrawable);
+        //mDrawInsetsFrameLayout.setInsetBackground(mStatusBarColorDrawable);
     }
 
     static float progress(float v, float min, float max) {
@@ -172,6 +209,23 @@ public class ArticleDetailFragment extends Fragment implements
         }
     }
 
+	private Date parsePublishedDate() {
+		try {
+			String date = mCursor.getString(ArticleLoader.Query.PUBLISHED_DATE);
+			//return dateFormat.parse(date);
+
+
+			cal.setTimeInMillis(Long.valueOf(date));
+
+			return cal.getTime();
+
+		} catch (Exception ex) {
+			Log.e(TAG, ex.getMessage());
+			Log.i(TAG, "passing today's date");
+			return new Date();
+		}
+	}
+
     private void bindViews() {
         if (mRootView == null) {
             return;
@@ -181,35 +235,67 @@ public class ArticleDetailFragment extends Fragment implements
         TextView bylineView = (TextView) mRootView.findViewById(R.id.article_byline);
         bylineView.setMovementMethod(new LinkMovementMethod());
         TextView bodyView = (TextView) mRootView.findViewById(R.id.article_body);
-        bodyView.setTypeface(Typeface.createFromAsset(getResources().getAssets(), "Rosario-Regular.ttf"));
+
+		Toolbar toolbar = (Toolbar)mRootView.findViewById(R.id.detail_toolbar);
+
+
+		bodyView.setTypeface(Typeface.createFromAsset(getResources().getAssets(), "Rosario-Regular.ttf"));
 
         if (mCursor != null) {
             mRootView.setAlpha(0);
             mRootView.setVisibility(View.VISIBLE);
             mRootView.animate().alpha(1);
             titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
-            bylineView.setText(Html.fromHtml(
-                    DateUtils.getRelativeTimeSpanString(
-                            mCursor.getLong(ArticleLoader.Query.PUBLISHED_DATE),
-                            System.currentTimeMillis(), DateUtils.HOUR_IN_MILLIS,
-                            DateUtils.FORMAT_ABBREV_ALL).toString()
-                            + " by <font color='#ffffff'>"
-                            + mCursor.getString(ArticleLoader.Query.AUTHOR)
-                            + "</font>"));
+			Date publishedDate = parsePublishedDate();
+
+			if (!publishedDate.before(START_OF_EPOCH.getTime())) {
+
+				bylineView.setText(Html.fromHtml(
+						DateUtils.getRelativeTimeSpanString(
+								publishedDate.getTime(),
+								System.currentTimeMillis(), DateUtils.HOUR_IN_MILLIS,
+								DateUtils.FORMAT_ABBREV_ALL).toString()
+								+ " by <font color='#ffffff'>"
+								+ mCursor.getString(ArticleLoader.Query.AUTHOR)
+								+ "</font>"));
+
+			} else {
+				// If date is before 1902, just show the string
+				bylineView.setText(Html.fromHtml(
+						outputFormat.format(publishedDate) + " by <font color='#ffffff'>"
+								+ mCursor.getString(ArticleLoader.Query.AUTHOR)
+								+ "</font>"));
+
+			}
             bodyView.setText(Html.fromHtml(mCursor.getString(ArticleLoader.Query.BODY)));
+
             ImageLoaderHelper.getInstance(getActivity()).getImageLoader()
                     .get(mCursor.getString(ArticleLoader.Query.PHOTO_URL), new ImageLoader.ImageListener() {
                         @Override
                         public void onResponse(ImageLoader.ImageContainer imageContainer, boolean b) {
-                            Bitmap bitmap = imageContainer.getBitmap();
-                            if (bitmap != null) {
-                                Palette p = Palette.generate(bitmap, 12);
-                                mMutedColor = p.getDarkMutedColor(0xFF333333);
-                                mPhotoView.setImageBitmap(imageContainer.getBitmap());
-                                mRootView.findViewById(R.id.meta_bar)
-                                        .setBackgroundColor(mMutedColor);
-                                updateStatusBar();
-                            }
+							Bitmap bitmap = imageContainer.getBitmap();
+							if (bitmap != null) {
+								//get closest color based on Dark Muted Color and bitmap.
+								Palette.from(bitmap).generate(new Palette.PaletteAsyncListener() {
+									@Override
+									public void onGenerated(Palette palette) {
+										mMutedColor = palette.getDarkMutedColor(0xFF333333);
+									}
+								});
+
+
+								mPhotoView.setImageBitmap(imageContainer.getBitmap());
+
+								mRootView.findViewById(R.id.meta_bar)
+										.setBackgroundColor(mMutedColor);
+								updateStatusBar();
+
+								Log.i("After loading photo: ",mPhotoView.getTransitionName());
+								Log.i("Test","getImageLoader");
+								scheduleStartPostponedTransition(mPhotoView);
+
+
+							}
                         }
 
                         @Override

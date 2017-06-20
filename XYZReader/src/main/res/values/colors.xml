@@ -18,14 +18,18 @@
 <resources>
     <color name="photo_placeholder">#ccc</color>
 
-    <color name="theme_primary">#04561A</color>
-    <color name="theme_primary_dark">#04561A</color>
-    <color name="theme_accent">#04561A</color>
-    <color name="ltgray">#ffe0e0e0</color>
+    <color name="theme_primary">#3f51b5</color>
+    <color name="theme_primary_dark">#303F9F</color>
+    <color name="theme_accent">#00bcd4</color>
 
-	<color name="text">#000</color>
+	<color name="ltgray">#ffe0e0e0</color>
 
-	<color name="textTitle">#000</color>
-	<color name="textSubTitle">#555</color>
+	<color name="card_view_title">@android:color/white</color>
+	<color name="card_view_subtitle">@android:color/white</color>
+
+	<color name="detail_view_title">@android:color/white</color>
+	<color name="detail_view_subtitle">#8fff</color>
+
+	<color name="background_on_title_and_subtitle">#333</color>
 
 </resources>

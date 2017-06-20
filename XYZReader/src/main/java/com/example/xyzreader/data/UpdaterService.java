@@ -27,6 +27,8 @@ public class UpdaterService extends IntentService {
             = "com.example.xyzreader.intent.action.STATE_CHANGE";
     public static final String EXTRA_REFRESHING
             = "com.example.xyzreader.intent.extra.REFRESHING";
+	public static final String CONNECTION_ERROR
+			= "com.example.xyzreader.intent.extra.CONNECTION_ERROR";
 
     public UpdaterService() {
         super(TAG);
@@ -40,6 +42,9 @@ public class UpdaterService extends IntentService {
         NetworkInfo ni = cm.getActiveNetworkInfo();
         if (ni == null || !ni.isConnected()) {
             Log.w(TAG, "Not online, not refreshing.");
+			sendStickyBroadcast(
+					new Intent(CONNECTION_ERROR).putExtra(CONNECTION_ERROR, true));
+
             return;
         }
 
@@ -70,7 +75,7 @@ public class UpdaterService extends IntentService {
                 values.put(ItemsContract.Items.THUMB_URL, object.getString("thumb" ));
                 values.put(ItemsContract.Items.PHOTO_URL, object.getString("photo" ));
                 values.put(ItemsContract.Items.ASPECT_RATIO, object.getString("aspect_ratio" ));
-                time.parse3339(object.getString("published_date"));
+				time.parse3339(object.getString("published_date"));
                 values.put(ItemsContract.Items.PUBLISHED_DATE, time.toMillis(false));
                 cpo.add(ContentProviderOperation.newInsert(dirUri).withValues(values).build());
             }
@@ -79,6 +84,8 @@ public class UpdaterService extends IntentService {
 
         } catch (JSONException | RemoteException | OperationApplicationException e) {
             Log.e(TAG, "Error updating content.", e);
+			sendStickyBroadcast(
+					new Intent(CONNECTION_ERROR).putExtra(CONNECTION_ERROR, true));
         }
 
         sendStickyBroadcast(
